@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="衣橱">
+<meta name="application-name" content="我的衣橱">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#f2f2f7">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<title>我的衣橱</title>
+<style>
+:root{
+  --bg:#f2f2f7; --card:#fff; --text:#1c1c1e; --text2:#8e8e93; --sep:rgba(60,60,67,.14);
+  --ink:#1c1c1e; --tint:#a8724a; --danger:#ff3b30;
+  --safe-top:max(env(safe-area-inset-top),12px); --safe-bottom:max(env(safe-area-inset-bottom),8px); --tabh:calc(52px + var(--safe-bottom));
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  overflow:hidden;background:#e9e5e0;overscroll-behavior:none;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+  color:var(--text);-webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer}
+input{font:inherit}
+#device{width:100%;max-width:520px;height:100vh;height:100dvh;margin:0 auto;box-shadow:0 0 40px rgba(0,0,0,.08)}
+#screen{position:relative;width:100%;height:100%;overflow:hidden;background:var(--bg)}
+.page{position:absolute;inset:0;overflow-y:auto;padding-top:var(--safe-top);padding-bottom:calc(var(--tabh) + 16px);display:none;scrollbar-width:none}
+.page.active{display:block}
+.page::-webkit-scrollbar,.body::-webkit-scrollbar,.frow::-webkit-scrollbar,.hscroll::-webkit-scrollbar{display:none}
+.largehead{display:flex;align-items:flex-end;justify-content:space-between;padding:8px 20px 4px}
+.largehead h1{margin:0;font-size:34px;font-weight:700;letter-spacing:.3px}
+.sub{color:var(--text2);font-size:13px;padding:0 20px 8px}
+.iconbtn{width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;color:var(--ink);background:rgba(120,120,128,.12)}
+.iconbtn svg{width:20px;height:20px}
+/* filters */
+.filters{padding:4px 0 2px}
+.frow{display:flex;gap:7px;overflow-x:auto;padding:4px 16px;align-items:center;scrollbar-width:none}
+.flabel{flex:none;font-size:12px;color:var(--text2);width:30px}
+.chip{flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:16px;background:var(--card);font-size:13px;border:1px solid var(--sep);white-space:nowrap;transition:background .15s,color .15s}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.dot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.dot.gold{background:linear-gradient(135deg,#fff3b0 0%,#e2bf4a 35%,#a8811f 65%,#f3dc7c 100%)}
+.dot.silver{background:linear-gradient(135deg,#ffffff 0%,#c9cdd4 35%,#8a9099 65%,#eef0f3 100%)}
+.dot.floral{background:conic-gradient(#e2798d 0 25%,#f0a53a 0 50%,#5e8d5a 0 75%,#8d6bb8 0)}
+/* grid */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px 16px}
+.grid.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--card);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05);position:relative;text-align:left;width:100%}
+.ph{aspect-ratio:3/4;background:#f4f2ee;display:block}
+.ph img,.thumb img,.refimg img,.hero img{width:100%;height:100%;object-fit:contain;display:block}
+.card .nm{font-size:12px;font-weight:500;padding:6px 8px 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .mt{font-size:10.5px;color:var(--text2);padding:0 8px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .check{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:12px;border:2px solid #fff;background:rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;color:#fff}
+.card.sel{box-shadow:0 0 0 2.5px var(--ink)}
+.card.sel .check{background:var(--ink)}
+.card .check svg{width:14px;height:14px;opacity:0}
+.card.sel .check svg{opacity:1}
+.empty{text-align:center;color:var(--text2);font-size:14px;padding:50px 30px;line-height:1.7}
+.foot{text-align:center;color:var(--text2);font-size:11px;padding:18px 30px 6px;line-height:1.6}
+/* outfit list */
+.ocard{display:flex;gap:12px;background:var(--card);border-radius:18px;margin:0 16px 12px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.05);width:calc(100% - 32px);text-align:left}
+.ocard .cover{width:92px;height:122px;border-radius:12px;overflow:hidden;flex:none;background:#f4f2ee;position:relative}
+.ocard .cover img{width:100%;height:100%;object-fit:cover}
+.ocard .cover .badge{position:absolute;left:5px;top:5px;font-size:9.5px;background:rgba(0,0,0,.55);color:#fff;padding:2px 6px;border-radius:8px}
+.ocard .info{flex:1;min-width:0;display:flex;flex-direction:column}
+.ocard h3{margin:2px 0 3px;font-size:16px;font-weight:600}
+.ocard .by{font-size:12.5px;color:var(--tint)}
+.ocard .pieces{display:flex;gap:5px;margin-top:auto}
+.thumb{width:42px;height:56px;border-radius:8px;background:#f4f2ee;overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text2)}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;background:#f2f0ec;color:#5a5048;display:inline-flex;align-items:center;gap:4px}
+/* tab bar */
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:var(--tabh);padding-bottom:var(--safe-bottom);z-index:60;display:flex;align-items:center;justify-content:space-around;background:rgba(249,249,249,.88);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;color:#999;width:80px}
+.tab svg{width:26px;height:26px}
+.tab.on{color:var(--ink)}
+.plus{width:52px;height:52px;border-radius:26px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25);margin-top:-14px}
+.plus svg{width:26px;height:26px}
+/* stacked views */
+#stack .view{position:absolute;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .34s cubic-bezier(.3,.75,.2,1);box-shadow:-8px 0 24px rgba(0,0,0,.08)}
+#stack .view.in{transform:none}
+.nav{flex:none;padding-top:var(--safe-top);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:calc(44px + var(--safe-top));background:rgba(242,242,247,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:.5px solid var(--sep);padding-left:8px;padding-right:16px}
+.nav .t{font-size:17px;font-weight:600;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav .l{justify-self:start;display:flex;align-items:center;color:var(--tint);font-size:17px}
+.nav .l svg{width:22px;height:22px}
+.nav .r{justify-self:end;color:var(--tint);font-size:17px}
+.nav .r.b{font-weight:600}
+.nav .r:disabled{opacity:.35}
+.body{flex:1;overflow-y:auto;padding-bottom:calc(var(--tabh) + 24px);scrollbar-width:none}
+.hero{margin:14px 16px 0;border-radius:20px;overflow:hidden;background:#f4f2ee;aspect-ratio:4/5;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.dtitle{font-size:24px;font-weight:700;margin:16px 20px 2px}
+.dsub{font-size:13px;color:var(--text2);margin:0 20px 12px}
+.glabel{font-size:13px;color:var(--text2);margin:18px 32px 6px;display:flex;justify-content:space-between}
+.group{background:var(--card);border-radius:12px;margin:0 16px;overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:11px 16px;min-height:44px;border-bottom:.5px solid var(--sep);font-size:15px}
+.row:last-child{border-bottom:0}
+.row .k{color:var(--text2);width:44px;flex:none;font-size:14px}
+.row .v{display:flex;gap:6px;flex-wrap:wrap}
+.btn-danger{display:block;width:calc(100% - 32px);margin:22px 16px 0;padding:13px;border-radius:12px;background:var(--card);color:var(--danger);font-size:16px;text-align:center}
+.mini{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:.5px solid var(--sep);width:100%;text-align:left}
+.mini:last-child{border-bottom:0}
+.mini .thumb{width:38px;height:50px}
+.mini .tx{flex:1;min-width:0}
+.mini .tx b{font-weight:500;font-size:15px;display:block}
+.mini .tx small{color:var(--text2);font-size:12px}
+.chev{color:#c4c4c7;font-size:18px}
+.hscroll{display:flex;gap:10px;overflow-x:auto;padding:0 16px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.refimg{flex:none;border-radius:16px;overflow:hidden;background:#eee;scroll-snap-align:start;aspect-ratio:3/4;position:relative}
+.refimg img{object-fit:cover}
+.refimg .lb{position:absolute;left:8px;top:8px;font-size:10.5px;padding:2px 7px;border-radius:8px;background:rgba(0,0,0,.55);color:#fff;max-width:calc(100% - 16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.refimg .lb.self{background:rgba(168,114,74,.92)}
+.seg{display:flex;background:rgba(118,118,128,.12);border-radius:9px;padding:2px;margin:12px 16px 0}
+.seg button{flex:1;padding:6px;border-radius:7px;font-size:13px;font-weight:500}
+.seg button.on{background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.side{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+.side .col{display:flex;flex-direction:column;gap:10px}
+.side .grid{padding:0;grid-template-columns:1fr 1fr;gap:8px}
+.pair2{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+.pair2 .col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pair2 .glabel{margin:18px 4px 0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.by-line{font-size:14px;color:var(--tint);margin:8px 20px 0}
+/* sheets */
+.sheet-wrap{position:absolute;inset:0;z-index:120;background:rgba(0,0,0,0);transition:background .3s}
+.sheet-wrap.on{background:rgba(0,0,0,.35)}
+.sheet{position:absolute;left:0;right:0;bottom:0;top:calc(var(--safe-top) + 6px);background:var(--bg);border-radius:14px 14px 0 0;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .36s cubic-bezier(.3,.75,.2,1);overflow:hidden}
+.sheet-wrap.on .sheet{transform:none}
+.sheet .nav{padding-top:0;height:56px;border-radius:14px 14px 0 0;padding-left:16px}
+.sheet .body{padding-bottom:40px}
+.field{display:block;width:100%;border:0;outline:0;padding:12px 16px;font-size:16px;background:transparent}
+.chips{display:flex;flex-wrap:wrap;gap:7px;padding:12px 14px}
+.photo{margin:14px 16px 0;border-radius:18px;overflow:hidden;background:#ebe8e3;aspect-ratio:1/1;position:relative;display:flex;align-items:center;justify-content:center}
+.photo img{width:100%;height:100%;object-fit:contain}
+.photo .hint{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:12px;color:#7d746b}
+.pbtns{display:flex;gap:10px;margin:12px 16px 0}
+.pbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 6px;border-radius:12px;background:var(--card);font-size:14px;font-weight:500;cursor:pointer}
+.pbtn svg{width:20px;height:20px}
+.pbtn.dark{background:var(--ink);color:#fff}
+.refs{display:flex;gap:10px;overflow-x:auto;padding:12px 14px}
+.refs .rt{flex:none;width:84px;height:112px;border-radius:12px;overflow:hidden;position:relative;background:#eee}
+.refs .rt img{width:100%;height:100%;object-fit:cover}
+.refs .rt .x{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:11px;background:rgba(0,0,0,.55);color:#fff;font-size:14px;line-height:22px;text-align:center}
+.refs .add{flex:none;width:84px;height:112px;border-radius:12px;border:1.5px dashed #c7c2bb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text2);font-size:11.5px;cursor:pointer;text-align:center}
+.refs .add svg{width:24px;height:24px}
+.picker .grid{padding:6px 12px 12px;gap:8px}
+.picker .filters{padding-top:8px}
+.picker .frow{padding:3px 12px}
+/* action sheet */
+.as-wrap{position:absolute;inset:0;z-index:150;background:rgba(0,0,0,0);transition:background .25s;display:flex;flex-direction:column;justify-content:flex-end;padding:0 8px calc(var(--safe-bottom) + 4px)}
+.as-wrap.on{background:rgba(0,0,0,.35)}
+.as{transform:translateY(120%);transition:transform .3s cubic-bezier(.3,.75,.2,1)}
+.as-wrap.on .as{transform:none}
+.as .grp{background:rgba(250,250,250,.96);border-radius:14px;overflow:hidden;margin-bottom:8px}
+.as .ttl{padding:14px 16px;font-size:13px;color:var(--text2);text-align:center;border-bottom:.5px solid var(--sep);line-height:1.5}
+.as button{display:block;width:100%;padding:17px;font-size:19px;color:#007aff;border-bottom:.5px solid var(--sep)}
+.as button:last-child{border-bottom:0}
+.as button.d{color:var(--danger)}
+.as button.c{font-weight:600}
+/* item detail v2 */
+.ihead{display:flex;gap:14px;margin:14px 16px 0;background:var(--card);border-radius:18px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.ihead .ph{width:112px;flex:none;border-radius:12px;overflow:hidden}
+.ihead .inf{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.ihead h2{margin:2px 0 0;font-size:20px;font-weight:700;line-height:1.3}
+.ihead .dt{font-size:12px;color:var(--text2)}
+.ihead .tl{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);flex-wrap:wrap}
+.ihead .tl b{font-weight:400;width:28px}
+.ihead .uses{margin-top:auto;font-size:12.5px;color:var(--tint);font-weight:500}
+.cta{display:flex;align-items:center;justify-content:center;gap:6px;margin:12px 16px 0;padding:13px;border-radius:14px;background:var(--ink);color:#fff;font-size:15.5px;font-weight:600;width:calc(100% - 32px)}
+.cta svg{width:20px;height:20px}
+.cta.light{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.sec{margin:24px 20px 10px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.sec h2{font-size:20px;margin:0;font-weight:700}
+.sec small{color:var(--text2);font-size:12.5px}
+.demo-row{display:flex;gap:12px;overflow-x:auto;padding:0 16px 4px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.demo-row::-webkit-scrollbar,.prow::-webkit-scrollbar{display:none}
+.demo{flex:none;width:236px;background:var(--card);border-radius:18px;overflow:hidden;scroll-snap-align:start;text-align:left;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.demo.only{width:100%}
+.demo .di{aspect-ratio:3/4;position:relative;background:#eee;display:block}
+.demo.only .di{aspect-ratio:4/4}
+.demo .di img{width:100%;height:100%;object-fit:cover;display:block}
+.sbadge{position:absolute;left:8px;top:8px;font-size:11px;font-weight:500;padding:3px 8px;border-radius:10px;color:#fff;background:rgba(28,28,30,.72);max-width:calc(100% - 16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badges{position:absolute;left:5px;top:5px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;max-width:calc(100% - 10px)}
+.badges .sbadge{position:static;max-width:100%}
+.ocard .cover .sbadge{font-size:9.5px;padding:2px 6px}
+.sbadge.self{background:rgba(168,114,74,.92)}
+.demo .more{position:absolute;right:8px;top:8px;font-size:11px;padding:3px 7px;border-radius:10px;background:rgba(255,255,255,.85);color:#5a5048}
+.demo .dn{padding:10px 12px 6px;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.demo .dp{display:flex;align-items:center;gap:5px;padding:0 12px 12px;font-size:11.5px;color:var(--text2)}
+.demo .dp .thumb{width:32px;height:43px;border-radius:7px}
+.emptybox{margin:0 16px;background:var(--card);border-radius:18px;padding:22px 18px;text-align:center;color:var(--text2);font-size:14px;line-height:1.7}
+.emptybox .cta{margin:14px 0 0;width:100%}
+.pcat{font-size:13px;color:var(--text2);margin:12px 20px 6px;font-weight:500}
+.prow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:0 16px}
+.pitem .ph{aspect-ratio:1/1}
+.pcat{margin-top:10px!important}
+.pitem{min-width:0;text-align:left}
+.pitem .ph{border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.pitem .nm{font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pitem .ct{font-size:11px;color:var(--tint)}
+.card .cnt{position:absolute;left:5px;top:5px;font-size:9.5px;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,.9);color:#7a5a40;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* duplicate check */
+.dup{margin:18px 16px 0;border-radius:14px;padding:12px 14px;background:#fff6ea;border:1px solid #f0dcc0}
+.dup.none{background:#eef6ee;border-color:#d3e7d3;color:#3f6b3f;font-size:13.5px;padding:11px 14px}
+.dup h4{margin:0 0 2px;font-size:14.5px;color:#8a5a2b;font-weight:600}
+.dup p{margin:0 0 10px;font-size:12px;color:#a07a55}
+.dup .dl{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none}
+.dup .di2{flex:none;width:72px;text-align:left}
+.dup .di2 .ph{border-radius:10px;overflow:hidden;background:#fff}
+.dup .di2 .nm{font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.peek{background:var(--card);border-radius:20px;overflow:hidden;margin:0 8px 8px;transform:translateY(120%);transition:transform .3s cubic-bezier(.3,.75,.2,1)}
+.as-wrap.on .peek{transform:none}
+.peek .ph{aspect-ratio:1/1;max-height:300px;width:100%}
+.peek .pi{padding:14px 16px 6px}
+.peek h3{margin:0 0 6px;font-size:18px}
+.peek .pn{font-size:12.5px;color:var(--text2);padding:2px 16px 14px}
+.remind{margin:4px 16px 8px;padding:11px 12px 11px 14px;border-radius:14px;background:#fff6ea;border:1px solid #f0dcc0;font-size:13px;color:#7a5530;line-height:1.5;display:flex;gap:10px;align-items:center}
+.remind .tx{flex:1}
+.remind button{flex:none;font-size:13px;font-weight:600;padding:6px 10px;border-radius:10px;background:var(--ink);color:#fff}
+.remind button.later{background:transparent;color:#a07a55;font-weight:500;padding:6px 4px}
+.empty-actions{display:flex;flex-direction:column;gap:0;margin-top:-20px}
+.fatal{padding:80px 30px;text-align:center;color:var(--text2);line-height:1.8}
+.toast{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%) scale(.9);background:rgba(30,30,30,.85);color:#fff;padding:12px 20px;border-radius:14px;font-size:14px;z-index:300;opacity:0;transition:all .2s;pointer-events:none;max-width:260px;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+</style>
+</head>
+<body>
+<div id="device">
+  <div id="screen">
+    <section class="page active" id="page-wardrobe"></section>
+    <section class="page" id="page-outfits"></section>
+    <div id="stack"></div>
+
+    <nav class="tabbar">
+      <button class="tab on" data-act="tab" data-v="wardrobe" id="tab-wardrobe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6.2a2 2 0 1 1 2.6 1.9c-.4.1-.6.5-.6.9v.8"/><path d="M12 9.8 3.2 15.9c-.9.6-.5 2.1.6 2.1h16.4c1.1 0 1.5-1.5.6-2.1L12 9.8z"/></svg>
+        <span>衣橱</span></button>
+      <button class="plus" data-act="plus" aria-label="新建">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="tab" data-act="tab" data-v="outfits" id="tab-outfits">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.5" height="10" rx="2"/><rect x="13" y="3.5" width="7.5" height="6" rx="2"/><rect x="13" y="11.5" width="7.5" height="9" rx="2"/><rect x="3.5" y="15.5" width="7.5" height="5" rx="2"/></svg>
+        <span>搭配</span></button>
+    </nav>
+    <div id="sheetroot"></div>
+    <div id="asroot"></div>
+    <div class="toast" id="toast"></div>
+    <input type="file" id="importInput" hidden>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const APP_VERSION = '1.0.1';
+const DB_NAME = 'my-wardrobe', DB_VER = 1;
+const LEGACY_KEYS = ['wardrobe-demo-v3', 'wardrobe-demo-v2', 'wardrobe-demo-v1'];
+const CATS = ['上衣','针织','马甲','外套','裤子','半裙','连衣裙','鞋子','配饰'];
+const SEASONS = ['春','夏','秋','冬'];
+const COLORS = [['黑','#2b2b2d'],['白','#f7f7f4'],['灰','#9c9ca1'],['米/卡其','#d9c4a0'],['棕','#8a5a3b'],['蓝','#3f6fb5'],['绿','#5e8d5a'],['红/粉','#e2798d'],['黄/橙','#f0a53a'],['紫','#8d6bb8'],['金色','#d4af37'],['银色','#c3c7cf'],['花色','floral']];
+const METAL = { '金色':['#f6e27a','#c9a227','#8a6d1c'], '银色':['#f4f5f7','#b9bec7','#7d838d'] };
+const colorHex = k => (COLORS.find(c => c[0] === k) || [])[1] || '#ccc';
+const DARK = ['黑','棕','蓝','绿','紫'];
+
+const I = {
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  more:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="18" cy="12" r="1.8"/></svg>',
+  camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  photo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="9.5" r="1.8"/><path d="M3.5 17l5-5 4 4 3-3 5 5"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+};
+
+/* ---------- SVG placeholders ---------- */
+const SHAPES = {
+  '鞋子': {d:'M35 115 L65 115 L83 139 L144 154 Q174 158 176 180 L176 194 L28 194 L25 173 Z', x:'<path d="M28 181 H176 M77 136 l-15 13 M91 142 l-14 13 M105 147 l-13 13 M35 119 L37 156 L58 156" fill="none"/>'},
+  '上衣':  {d:'M62 52 L86 40 Q100 56 114 40 L138 52 L176 88 L154 112 L140 98 L140 216 L60 216 L60 98 L46 112 L24 88 Z', x:'<path d="M86 40 Q100 62 114 40" fill="none"/>'},
+  '针织':  {d:'M64 48 L86 38 Q100 52 114 38 L136 48 L162 80 L176 200 L154 204 L140 112 L140 214 L60 214 L60 112 L46 204 L24 200 L38 80 Z', x:'<path d="M60 202 H140 M154 194 l22 -2 M46 194 l-22 -2 M80 70 v130 M100 62 v140 M120 70 v130" fill="none" stroke-dasharray="3 5"/>'},
+  '马甲':  {d:'M72 40 L90 34 L100 96 L110 34 L128 40 L138 80 L148 210 L52 210 L62 80 Z', x:'<path d="M100 96 V210" fill="none"/><circle cx="100" cy="125" r="3"/><circle cx="100" cy="152" r="3"/><circle cx="100" cy="179" r="3"/>'},
+  '外套':  {d:'M64 34 L88 26 L100 70 L112 26 L136 34 L166 76 L180 210 L160 214 L146 110 L150 236 L50 236 L54 110 L40 214 L20 210 L34 76 Z', x:'<path d="M100 70 V236 M88 26 L82 74 L100 70 M112 26 L118 74 L100 70" fill="none"/><circle cx="92" cy="120" r="3"/><circle cx="92" cy="160" r="3"/>'},
+  '裤子':  {d:'M66 30 L134 30 L152 232 L112 232 L100 98 L88 232 L48 232 Z', x:'<path d="M66 44 H134 M100 44 V98" fill="none"/>'},
+  '半裙':  {d:'M72 54 L128 54 L164 214 L36 214 Z', x:'<path d="M72 68 H128 M90 68 L74 214 M110 68 L126 214 M100 68 V214" fill="none"/>'},
+  '连衣裙':{d:'M80 28 L92 28 Q100 44 108 28 L120 28 L126 64 L116 100 L166 226 L34 226 L84 100 L74 64 Z', x:'<path d="M84 100 H116" fill="none"/>'}
+};
+const svgURL = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+// 配饰: several silhouettes (围巾/项链/帽子/包); user-added accessories without photo use 包
+const ACC = {
+  scarf:(f, st, ln) => '<path d="M58 44 Q100 30 142 44 L142 76 Q100 62 58 76 Z M70 70 L98 66 L104 212 L74 216 Z M108 64 L136 70 L130 202 L104 198 Z" fill="' + f + '" stroke="' + st + '" stroke-width="2" stroke-linejoin="round"/>' +
+    '<g stroke="' + ln + '" stroke-width="1.6"><path d="M74 216 v12 M82 215 v12 M90 214 v12 M98 213 v12 M106 199 v12 M114 200 v12 M122 201 v12 M130 202 v12 M60 56 Q100 44 140 56"/></g>',
+  necklace:(f, st) => { let c = ''; for (let i = 0; i <= 18; i++) { const a = Math.PI * (0.08 + 0.84 * i / 18); c += '<circle cx="' + (100 - 62 * Math.cos(a)).toFixed(1) + '" cy="' + (70 + 92 * Math.sin(a)).toFixed(1) + '" r="7.5" fill="' + f + '" stroke="' + st + '" stroke-width="1.5"/>'; }
+    return '<path d="M42 60 Q100 20 158 60" fill="none" stroke="#c9b48a" stroke-width="2"/>' + c + '<circle cx="100" cy="176" r="12" fill="' + f + '" stroke="' + st + '" stroke-width="1.5"/>'; },
+  beret:(f, st, ln) => '<rect x="94" y="78" width="12" height="16" rx="4" fill="' + f + '" stroke="' + st + '" stroke-width="2"/><ellipse cx="100" cy="132" rx="78" ry="42" fill="' + f + '" stroke="' + st + '" stroke-width="2"/><path d="M40 146 Q100 176 160 146" fill="none" stroke="' + ln + '" stroke-width="1.6"/>',
+  earrings:(f, st) => '<circle cx="66" cy="70" r="7" fill="' + f + '" stroke="' + st + '" stroke-width="1.5"/><circle cx="134" cy="70" r="7" fill="' + f + '" stroke="' + st + '" stroke-width="1.5"/>' +
+    '<circle cx="66" cy="132" r="40" fill="none" stroke="' + f + '" stroke-width="11"/><circle cx="134" cy="132" r="40" fill="none" stroke="' + f + '" stroke-width="11"/>' +
+    '<circle cx="66" cy="132" r="45.5" fill="none" stroke="' + st + '" stroke-width="1"/><circle cx="134" cy="132" r="45.5" fill="none" stroke="' + st + '" stroke-width="1"/>',
+  belt:(f, st, ln) => '<path d="M20 118 Q100 104 180 118 L180 140 Q100 126 20 140 Z" fill="#3a2a22" stroke="' + st + '" stroke-width="1.5"/><rect x="70" y="100" width="44" height="52" rx="8" fill="none" stroke="' + f + '" stroke-width="9"/><rect x="65.5" y="95.5" width="53" height="61" rx="11" fill="none" stroke="' + st + '" stroke-width="1"/><path d="M92 112 V140" stroke="' + f + '" stroke-width="5"/>',
+  bag:(f, st, ln) => '<path d="M74 110 Q74 58 100 58 Q126 58 126 110" fill="none" stroke="' + st + '" stroke-width="7"/><path d="M44 106 H156 L166 214 H34 Z" fill="' + f + '" stroke="' + st + '" stroke-width="2" stroke-linejoin="round"/><path d="M44 130 H156" stroke="' + ln + '" stroke-width="1.6"/><rect x="92" y="124" width="16" height="14" rx="3" fill="' + ln + '"/>'
+};
+function garmentSVG(cat, color, shape){
+  const sh = SHAPES[cat] || SHAPES['上衣'];
+  const acc = cat === '配饰';
+  const floral = color === '花色';
+  const metal = METAL[color];
+  const fill = floral ? 'url(#fp)' : metal ? 'url(#mg)' : colorHex(color);
+  const stroke = color === '白' ? '#cfc9c0' : 'rgba(0,0,0,.18)';
+  const line = DARK.includes(color) ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.2)';
+  const defs = metal ? '<defs><linearGradient id="mg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + metal[0] + '"/><stop offset=".45" stop-color="' + metal[1] + '"/><stop offset=".7" stop-color="' + metal[2] + '"/><stop offset="1" stop-color="' + metal[0] + '"/></linearGradient></defs>' : floral ? '<defs><pattern id="fp" width="28" height="28" patternUnits="userSpaceOnUse"><rect width="28" height="28" fill="#fbf3e6"/><circle cx="7" cy="7" r="4.2" fill="#e2798d"/><circle cx="21" cy="19" r="4.2" fill="#f0a53a"/><circle cx="20" cy="6" r="2.3" fill="#5e8d5a"/><circle cx="7" cy="21" r="2.3" fill="#8d6bb8"/></pattern></defs>' : '';
+  return svgURL('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 266">' + defs +
+    '<rect width="200" height="266" fill="#f4f2ee"/>' +
+    '<ellipse cx="100" cy="246" rx="60" ry="6" fill="rgba(0,0,0,.05)"/>' +
+    (acc ? (ACC[shape] || ACC.bag)(fill, stroke, line) :
+    '<path d="' + sh.d + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2" stroke-linejoin="round"/>' +
+    '<g stroke="' + line + '" fill="' + line + '" stroke-width="1.6">' + sh.x + '</g>') +
+    '<text x="100" y="258" text-anchor="middle" font-size="12" fill="#a39a90" font-family="PingFang SC,Noto Sans CJK SC,sans-serif">' + cat + ' · ' + color + '</text></svg>');
+}
+function selfSVG(hue, top, bottom, coat){ return bloggerSVG('', hue, top, bottom, coat, '我的穿搭'); }
+function bloggerSVG(name, hue, top, bottom, coat, label){
+  label = label || '博主示范图';
+  const c = k => k === '花色' ? '#e9a0ae' : colorHex(k);
+  return svgURL('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400">' +
+    '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(' + hue + ',38%,88%)"/><stop offset="1" stop-color="hsl(' + hue + ',30%,70%)"/></linearGradient></defs>' +
+    '<rect width="300" height="400" fill="url(#g)"/>' +
+    '<rect x="0" y="300" width="300" height="100" fill="rgba(255,255,255,.18)"/>' +
+    '<path d="M128 72 Q150 40 172 72 L176 104 Q150 96 124 104 Z" fill="#3b2a22"/>' +
+    '<circle cx="150" cy="88" r="22" fill="#ecd1bb"/>' +
+    '<rect x="143" y="106" width="14" height="12" fill="#ecd1bb"/>' +
+    (coat ? '<path d="M108 120 L192 120 L204 270 L96 270 Z" fill="' + c(coat) + '"/>' : '') +
+    '<path d="M116 118 L184 118 L190 210 L110 210 Z" fill="' + c(top) + '"/>' +
+    '<path d="M112 208 L188 208 L196 318 L160 318 L150 250 L140 318 L104 318 Z" fill="' + c(bottom) + '"/>' +
+    '<rect x="108" y="318" width="30" height="8" rx="4" fill="#2b2b2d"/><rect x="162" y="318" width="30" height="8" rx="4" fill="#2b2b2d"/>' +
+    '<rect x="88" y="344" width="124" height="30" rx="15" fill="rgba(255,255,255,.85)"/>' +
+    '<text x="150" y="364" text-anchor="middle" font-size="15" fill="#5a5048" font-family="PingFang SC,Noto Sans CJK SC,sans-serif">' + label + '</text>' +
+    (name ? '<text x="286" y="26" text-anchor="end" font-size="13" fill="rgba(0,0,0,.45)" font-family="PingFang SC,Noto Sans CJK SC,sans-serif">@' + name + '</text>' : '') + '</svg>');
+}
+
+/* ---------- data ---------- */
+function uid(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function makeSample(){
+  const t0 = Date.now() - 86400000 * 50;
+  const raw = [
+    ['白色基础T恤','上衣',['春','夏'],'白'],
+    ['蓝白条纹衬衫','上衣',['春','秋'],'蓝'],
+    ['驼色羊绒开衫','针织',['秋','冬'],'米/卡其'],
+    ['灰色圆领毛衣','针织',['秋','冬'],'灰'],
+    ['黑色西装马甲','马甲',['春','秋'],'黑'],
+    ['橄榄绿针织马甲','马甲',['春','秋'],'绿'],
+    ['卡其色风衣','外套',['春','秋'],'米/卡其'],
+    ['黑色羊毛大衣','外套',['冬'],'黑'],
+    ['直筒牛仔裤','裤子',['春','秋','冬'],'蓝'],
+    ['白色阔腿裤','裤子',['夏'],'白'],
+    ['棕色百褶半裙','半裙',['秋','冬'],'棕'],
+    ['法式碎花连衣裙','连衣裙',['春','夏'],'花色'],
+    ['驼色羊绒围巾','配饰',['秋','冬'],'米/卡其','scarf'],
+    ['珍珠项链','配饰',['春','夏','秋','冬'],'白','necklace'],
+    ['黑色贝雷帽','配饰',['秋','冬'],'黑','beret'],
+    ['金色圆环耳饰','配饰',['春','夏','秋','冬'],'金色','earrings'],
+    ['银色扣细腰带','配饰',['春','夏','秋'],'银色','belt']
+  ];
+  const items = raw.map((r, i) => ({ id:'s' + i, name:r[0], cat:r[1], seasons:r[2], color:r[3], shape:r[4], img:garmentSVG(r[1], r[3], r[4]), createdAt:t0 + i * 86400000 * 3 }));
+  const D = 86400000, now = Date.now();
+  const outfits = [
+    { id:'o1', name:'通勤风衣 Look', itemIds:['s1','s6','s8','s15'], blogger:'示例博主A', photos:[{ src:'blogger', img:bloggerSVG('示例博主A', 30, '蓝', '蓝', '米/卡其') }, { src:'self', img:selfSVG(190, '蓝', '蓝', '米/卡其') }], createdAt:now - D * 12 },
+    { id:'o2', name:'秋日学院风', itemIds:['s0','s2','s10','s14'], blogger:'示例博主B', photos:[{ src:'blogger', img:bloggerSVG('示例博主B', 15, '米/卡其', '棕') }, { src:'blogger', img:bloggerSVG('示例博主B', 200, '白', '棕') }], createdAt:now - D * 10 },
+    { id:'o3', name:'冬日极简黑灰', itemIds:['s3','s7','s8','s12'], blogger:'示例博主C', photos:[{ src:'blogger', img:bloggerSVG('示例博主C', 220, '灰', '蓝', '黑') }, { src:'self', img:selfSVG(30, '灰', '蓝', '黑') }], createdAt:now - D * 8 },
+    { id:'o4', name:'周末牛仔休闲', itemIds:['s0','s5','s8','s16'], blogger:'', photos:[{ src:'self', img:selfSVG(100, '绿', '蓝') }], createdAt:now - D * 6 },
+    { id:'o5', name:'风衣配碎花裙', itemIds:['s11','s6','s13','s16'], blogger:'', photos:[{ src:'self', img:selfSVG(40, '花色', '花色', '米/卡其') }], createdAt:now - D * 4 },
+    { id:'o6', name:'黑马甲干练通勤', itemIds:['s4','s0','s9','s15'], blogger:'示例博主A', photos:[{ src:'blogger', img:bloggerSVG('示例博主A', 260, '黑', '白') }], createdAt:now - D * 3 },
+    { id:'o7', name:'灰毛衣配百褶裙', itemIds:['s3','s10','s7','s12','s14'], blogger:'', photos:[{ src:'self', img:selfSVG(25, '灰', '棕', '黑') }], createdAt:now - D * 1 }
+  ];
+  // fresh ids + sample flag so sample data can be added to / removed from a real wardrobe
+  const map = {}; items.forEach(x => { map[x.id] = uid('si'); x.id = map[x.id]; x.sample = true; });
+  outfits.forEach(o => { o.id = uid('so'); o.sample = true; o.itemIds = o.itemIds.map(id => map[id]); });
+  return { items, outfits };
+}
+let db = { items:[], outfits:[] };
+let meta = {};
+
+/* ---------- IndexedDB storage (photos stored as compressed JPEG data URLs inside records) ---------- */
+const Store = {
+  idb:null,
+  open(){
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error('此浏览器不支持本地数据库'));
+      const r = indexedDB.open(DB_NAME, DB_VER);
+      r.onupgradeneeded = () => { const d = r.result;
+        if (!d.objectStoreNames.contains('items')) d.createObjectStore('items', { keyPath:'id' });
+        if (!d.objectStoreNames.contains('outfits')) d.createObjectStore('outfits', { keyPath:'id' });
+        if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta'); };
+      r.onsuccess = () => { this.idb = r.result; this.idb.onversionchange = () => this.idb.close(); resolve(); };
+      r.onerror = () => reject(r.error);
+      r.onblocked = () => reject(new Error('数据库被占用，请关闭其他打开的衣橱页面后重试'));
+    });
+  },
+  tx(stores, mode, fn){
+    return new Promise((resolve, reject) => {
+      const t = this.idb.transaction(stores, mode); let out;
+      try { out = fn(t); } catch (e) { try { t.abort(); } catch (_) {} return reject(e); }
+      t.oncomplete = () => resolve(out); t.onerror = () => reject(t.error); t.onabort = () => reject(t.error || new Error('写入被中止'));
+    });
+  },
+  getAll(store){
+    return new Promise((resolve, reject) => { const r = this.idb.transaction(store).objectStore(store).getAll(); r.onsuccess = () => resolve(r.result || []); r.onerror = () => reject(r.error); });
+  },
+  getMeta(){
+    return new Promise((resolve, reject) => { const out = {}; const r = this.idb.transaction('meta').objectStore('meta').openCursor();
+      r.onsuccess = () => { const c = r.result; if (c) { out[c.key] = c.value; c.continue(); } else resolve(out); }; r.onerror = () => reject(r.error); });
+  },
+  setMeta(k, v){ meta[k] = v; return this.tx(['meta'], 'readwrite', t => t.objectStore('meta').put(v, k)); },
+  apply(ch){ // ch: {items:[], outfits:[], delItems:[ids], delOutfits:[ids]}
+    return this.tx(['items', 'outfits'], 'readwrite', t => {
+      const I = t.objectStore('items'), O = t.objectStore('outfits');
+      (ch.items || []).forEach(x => I.put(x)); (ch.outfits || []).forEach(x => O.put(x));
+      (ch.delItems || []).forEach(id => I.delete(id)); (ch.delOutfits || []).forEach(id => O.delete(id));
+    });
+  },
+  replaceAll(items, outfits){
+    return this.tx(['items', 'outfits'], 'readwrite', t => {
+      const I = t.objectStore('items'), O = t.objectStore('outfits'); I.clear(); O.clear();
+      items.forEach(x => I.put(x)); outfits.forEach(x => O.put(x));
+    });
+  }
+};
+function storageError(e){
+  const full = e && (e.name === 'QuotaExceededError' || /quota/i.test(e.message || ''));
+  toast(full ? '手机存储空间不足，未能保存。请清理手机空间后重试' : '保存失败：' + ((e && e.message) || '未知错误'));
+  console.error(e);
+}
+function persist(ch){ return Store.apply(ch).catch(storageError); }
+function normalizeData(data){
+  const items = (data.items || []).filter(x => x && x.id && x.cat && x.img).map(x => Object.assign({ seasons:[], name:'', color:'' }, x, { seasons:Array.isArray(x.seasons) ? x.seasons : [] }));
+  const ids = new Set(items.map(x => x.id));
+  const outfits = (data.outfits || []).filter(o => o && o.id).map(o => {
+    const photos = Array.isArray(o.photos) ? o.photos.filter(p => p && p.img).map(p => ({ src:p.src === 'self' ? 'self' : 'blogger', img:p.img }))
+      : (o.refs || []).map(img => ({ src:o.src === 'self' ? 'self' : 'blogger', img }));
+    const out = Object.assign({}, o, { photos, blogger:o.blogger || '', itemIds:(o.itemIds || []).filter(id => ids.has(id)), createdAt:o.createdAt || Date.now() });
+    delete out.refs; delete out.src; return out;
+  });
+  return { items, outfits };
+}
+function readLegacy(){
+  for (const k of LEGACY_KEYS) {
+    try { const s = JSON.parse(localStorage.getItem(k)); if (s && Array.isArray(s.items) && (s.items.length || (s.outfits || []).length)) return { key:k, data:normalizeData(s) }; } catch (e) {}
+  }
+  return null;
+}
+async function init(){
+  try { await Store.open(); }
+  catch (e) { $('#page-wardrobe').innerHTML = '<div class="fatal">无法打开本地数据库<br><small>' + esc(e.message || '') + '</small><br><small>如果正在使用无痕浏览，请切换到普通模式</small></div>'; return; }
+  const [items, outfits, m] = await Promise.all([Store.getAll('items'), Store.getAll('outfits'), Store.getMeta()]);
+  meta = m; db = normalizeData({ items, outfits });
+  if (!meta.initializedAt) {
+    const legacy = !db.items.length && !db.outfits.length ? readLegacy() : null;
+    if (legacy) {
+      try { await Store.replaceAll(legacy.data.items, legacy.data.outfits); db = legacy.data; LEGACY_KEYS.forEach(k => localStorage.removeItem(k)); setTimeout(() => toast('已从旧版本迁移 ' + db.items.length + ' 件衣物'), 300); }
+      catch (e) { storageError(e); }
+    }
+    await Store.setMeta('initializedAt', Date.now()).catch(() => {});
+  }
+  renderPages();
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persisted().then(p => p || navigator.storage.persist()).then(p => { meta.persisted = !!p; }).catch(() => {});
+  }
+}
+const getItem = id => db.items.find(x => x.id === id);
+const getOutfit = id => db.outfits.find(x => x.id === id);
+const outfitsWith = id => db.outfits.filter(o => o.itemIds.includes(id)).sort((a, b) => b.createdAt - a.createdAt);
+const bPhotos = o => o.photos.filter(p => p.src === 'blogger');
+const sPhotos = o => o.photos.filter(p => p.src === 'self');
+const coverPhoto = o => bPhotos(o)[0] || sPhotos(o)[0] || null; // prefer blogger
+const pLabel = (o, p) => p.src === 'self' ? '我的穿搭' : ('博主' + (o.blogger ? '·' + o.blogger : '示范'));
+const pBadge = (o, p, extra) => '<span class="sbadge' + (p.src === 'self' ? ' self' : '') + '">' + esc(pLabel(o, p)) + (extra || '') + '</span>';
+const srcBadges = o => { const b = bPhotos(o), m = sPhotos(o); return (b.length ? pBadge(o, b[0], b.length > 1 ? ' ×' + b.length : '') : '') + (m.length ? pBadge(o, m[0], m.length > 1 ? ' ×' + m.length : '') : ''); };
+const srcText = o => { const b = bPhotos(o).length, m = sPhotos(o).length, t = [];
+  if (b) t.push(o.blogger ? '博主 @' + esc(o.blogger) : '博主示范'); if (m) t.push('我的穿搭照片'); return t.join(' · '); };
+
+/* ---------- ui state ---------- */
+const newFilter = () => ({ cat:new Set(), season:new Set(), color:new Set() });
+const ui = { tab:'wardrobe', wf:newFilter(), stack:[], draft:null, odLayout:'stack' };
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = ts => { const d = new Date(ts); return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; };
+const sortSeasons = a => SEASONS.filter(s => a.includes(s));
+function outfitSeasons(items){
+  const main = items.filter(i => i.cat !== '配饰');
+  const relevant = main.length ? main : items;
+  return relevant.length ? SEASONS.filter(s => relevant.every(i => i.seasons.includes(s))) : [];
+}
+function applyFilter(items, f){
+  return items.filter(it => (!f.cat.size || f.cat.has(it.cat)) && (!f.season.size || it.seasons.some(s => f.season.has(s))) && (!f.color.size || f.color.has(it.color)));
+}
+function dotHTML(color){ return color === '金色' ? '<i class="dot gold"></i>' : color === '银色' ? '<i class="dot silver"></i>' : color === '花色' ? '<i class="dot floral"></i>' : '<i class="dot" style="background:' + colorHex(color) + '"></i>'; }
+function filtersHTML(f, scope){
+  const row = (label, dim, vals, isColor) =>
+    '<div class="frow"><span class="flabel">' + label + '</span>' +
+    '<button class="chip' + (f[dim].size ? '' : ' on') + '" data-act="filter" data-scope="' + scope + '" data-dim="' + dim + '" data-v="">全部</button>' +
+    vals.map(v => '<button class="chip' + (f[dim].has(v) ? ' on' : '') + '" data-act="filter" data-scope="' + scope + '" data-dim="' + dim + '" data-v="' + esc(v) + '">' + (isColor ? dotHTML(v) : '') + esc(v) + '</button>').join('') + '</div>';
+  return '<div class="filters">' + row('品类', 'cat', CATS) + row('季节', 'season', SEASONS) + row('色系', 'color', COLORS.map(c => c[0]), true) + '</div>';
+}
+function itemCard(it, opts){
+  opts = opts || {};
+  return '<button class="card' + (opts.sel ? ' sel' : '') + '" data-act="' + (opts.act || 'openItem') + '" data-id="' + it.id + '">' +
+    '<span class="ph"><img src="' + it.img + '" alt="" loading="lazy"></span>' +
+    (!opts.pick && !opts.noCount && (opts.n = outfitsWith(it.id).length) ? '<span class="cnt">' + opts.n + '套搭配</span>' : '') +
+    '<div class="nm">' + esc(it.name) + '</div><div class="mt">' + esc(it.cat) + ' · ' + sortSeasons(it.seasons).join('') + '</div>' +
+    (opts.pick ? '<span class="check">' + I.check + '</span>' : '') + '</button>';
+}
+
+/* ---------- pages ---------- */
+function renderWardrobe(){
+  const list = applyFilter(db.items, ui.wf).sort((a, b) => b.createdAt - a.createdAt);
+  const any = ui.wf.cat.size || ui.wf.season.size || ui.wf.color.size;
+  $('#page-wardrobe').innerHTML =
+    '<div class="largehead"><h1>衣橱</h1><button class="iconbtn" data-act="settings" aria-label="更多">' + I.more + '</button></div>' +
+    '<div class="sub">共 ' + db.items.length + ' 件' + (any ? ' · 筛选出 ' + list.length + ' 件' : '') + '</div>' +
+    reminderHTML() +
+    (db.items.length ? filtersHTML(ui.wf, 'w') : '') +
+    (list.length ? '<div class="grid">' + list.map(it => itemCard(it)).join('') + '</div>'
+      : db.items.length ? '<div class="empty">没有符合条件的衣物<br>试试调整筛选</div>'
+      : '<div class="empty">衣橱还是空的<br>拍下或导入已买的衣服、鞋子和配饰，开始整理吧</div><div class="empty-actions"><button class="cta" data-act="addItem">' + I.plus + '添加第一件衣物</button><button class="cta light" data-act="loadSample">先载入示例数据看看</button></div>') +
+    '<div class="foot">数据只保存在这台设备上，不会上传<br>请定期在右上角 ⋯ 中导出备份</div>';
+}
+function outfitCard(o){
+  const items = o.itemIds.map(getItem).filter(Boolean);
+  const cp = coverPhoto(o), cover = cp ? cp.img : (items[0] && items[0].img) || '';
+  const seasons = outfitSeasons(items);
+  return '<button class="ocard" data-act="openOutfit" data-id="' + o.id + '">' +
+    '<div class="cover">' + (cover ? '<img src="' + cover + '" alt="">' : '') + (o.photos.length ? '<span class="badges">' + srcBadges(o) + '</span>' : '') + '</div>' +
+    '<div class="info"><h3>' + esc(o.name) + '</h3>' +
+    (o.photos.length ? '<div class="by">' + srcText(o) + '</div>' : '<div class="by" style="color:var(--text2)">未添加示范图</div>') +
+    '<div class="tags">' + (seasons.length ? seasons.map(s => '<span class="tag">' + s + '</span>').join('') : '<span class="tag">季节待确认</span>') + '<span class="tag">' + items.length + ' 件单品</span></div>' +
+    '<div class="pieces">' + items.slice(0, 4).map(i => '<span class="thumb"><img src="' + i.img + '" alt=""></span>').join('') +
+    (items.length > 4 ? '<span class="thumb">+' + (items.length - 4) + '</span>' : '') + '</div></div></button>';
+}
+function renderOutfits(){
+  const list = db.outfits.slice().sort((a, b) => b.createdAt - a.createdAt);
+  $('#page-outfits').innerHTML =
+    '<div class="largehead"><h1>搭配</h1><button class="iconbtn" data-act="settings" aria-label="更多">' + I.more + '</button></div>' +
+    '<div class="sub">' + list.length + ' 套搭配</div>' +
+    (list.length ? list.map(outfitCard).join('') : '<div class="empty">还没有搭配<br>' + (db.items.length ? '点击下方 ＋ 新建搭配，附上博主示范或自己的穿搭照片' : '先在衣橱里添加衣物，再来组合搭配') + '</div>');
+}
+function renderPages(){
+  renderWardrobe(); renderOutfits();
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + ui.tab));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.v === ui.tab));
+}
+
+/* ---------- detail views (push) ---------- */
+function itemDetailHTML(it){
+  const used = outfitsWith(it.id);
+  // 可搭配单品: other items sharing an outfit with this one
+  const pair = {};
+  used.forEach(o => o.itemIds.forEach(x => { if (x !== it.id && getItem(x)) pair[x] = (pair[x] || 0) + 1; }));
+  const pairItems = Object.keys(pair).map(getItem).sort((a, b) => pair[b.id] - pair[a.id] || a.name.localeCompare(b.name));
+  const demoCard = o => {
+    const others = o.itemIds.filter(x => x !== it.id).map(getItem).filter(Boolean);
+    const cp = coverPhoto(o), cov = cp ? cp.img : it.img, both = bPhotos(o).length && sPhotos(o).length;
+    return '<button class="demo' + (used.length === 1 ? ' only' : '') + '" data-act="openOutfit" data-id="' + o.id + '">' +
+      '<span class="di"><img src="' + cov + '" alt="">' + (cp ? pBadge(o, cp) : '') + (both ? '<span class="more">+我的穿搭</span>' : o.photos.length > 1 ? '<span class="more">' + o.photos.length + '张</span>' : '') + '</span>' +
+      '<div class="dn">' + esc(o.name) + '</div>' +
+      '<div class="dp">' + (others.length ? '搭配 ' + others.slice(0, 4).map(i => '<span class="thumb"><img src="' + i.img + '" alt=""></span>').join('') + (others.length > 4 ? '<span>+' + (others.length - 4) + '</span>' : '') : '仅这一件') + '</div></button>';
+  };
+  const byCat = CATS.map(c => [c, pairItems.filter(i => i.cat === c)]).filter(g => g[1].length);
+  return '<div class="nav"><button class="l" data-act="back">' + I.back + '返回</button><div class="t">' + esc(it.name) + '</div><button class="r" data-act="editItem" data-id="' + it.id + '">编辑</button></div>' +
+    '<div class="body">' +
+    '<div class="ihead"><span class="ph"><img src="' + it.img + '" alt=""></span><div class="inf">' +
+      '<h2>' + esc(it.name) + '</h2>' +
+      '<div class="tl"><b>品类</b><span class="tag">' + esc(it.cat) + '</span></div>' +
+      '<div class="tl"><b>季节</b>' + sortSeasons(it.seasons).map(s => '<span class="tag">' + s + '</span>').join('') + '</div>' +
+      '<div class="tl"><b>色系</b><span class="tag">' + dotHTML(it.color) + esc(it.color) + '</span></div>' +
+      '<div class="uses">' + (used.length ? '已有 ' + used.length + ' 套搭配 · 可搭 ' + pairItems.length + ' 件单品' : '还没有搭配') + '</div>' +
+    '</div></div>' +
+    '<div class="sec"><h2>搭配示范</h2><small>这件怎么穿' + (used.length > 1 ? ' · 左右滑动' : '') + '</small></div>' +
+    (used.length ? '<div class="demo-row">' + used.map(demoCard).join('') + '</div>'
+      : '<div class="emptybox">还没有用到这件的搭配<br>照着博主示范或自己的穿搭照片记一套吧</div>') +
+    '<button class="cta" data-act="newOutfitWith" data-id="' + it.id + '">' + I.plus + '用这件新建搭配</button>' +
+    '<div class="sec"><h2>可搭配单品</h2><small>' + (pairItems.length ? pairItems.length + ' 件 · 来自已有搭配' : '') + '</small></div>' +
+    (byCat.length ? byCat.map(g => '<div class="pcat">' + g[0] + ' · ' + g[1].length + '</div><div class="prow">' +
+        g[1].map(p => '<button class="pitem" data-act="openItem" data-id="' + p.id + '"><span class="ph"><img src="' + p.img + '" alt=""></span><div class="nm">' + esc(p.name) + '</div><div class="ct">同搭 ' + pair[p.id] + ' 套</div></button>').join('') + '</div>').join('')
+      : '<div class="emptybox">加入搭配后，这里会列出和它一起穿过的单品</div>') +
+    '<div class="foot">添加于 ' + fmtDate(it.createdAt) + '</div>' +
+    '<button class="btn-danger" data-act="delItem" data-id="' + it.id + '">删除这件衣物</button>' +
+    '</div>';
+}
+function outfitDetailHTML(o){
+  const items = o.itemIds.map(getItem).filter(Boolean);
+  const seasons = outfitSeasons(items);
+  const groups = [['blogger', '博主示范图' + (o.blogger ? ' · @' + esc(o.blogger) : ''), bPhotos(o)], ['self', '我的穿搭照片', sPhotos(o)]].filter(g => g[2].length);
+  const pimg = (p, i, n, w) => '<div class="refimg" style="width:' + w + '"><img src="' + p.img + '" alt=""><span class="lb' + (p.src === 'self' ? ' self' : '') + '">' + esc(pLabel(o, p)) + (n > 1 ? ' ' + (i + 1) : '') + '</span></div>';
+  const refsStack = groups.length === 2 // both kinds: side-by-side columns, each labeled
+    ? '<div class="pair2">' + groups.map(g => '<div class="col"><div class="glabel">' + g[1] + '</div>' + g[2].map((p, i) => pimg(p, i, g[2].length, '100%')).join('') + '</div>').join('') + '</div>'
+    : groups.length ? groups.map(g => '<div class="glabel"><span>' + g[1] + '</span><span>' + (g[2].length > 2 ? '左右滑动查看' : '') + '</span></div>' +
+      '<div class="hscroll">' + g[2].map((p, i) => pimg(p, i, g[2].length, g[2].length === 1 ? '78%' : 'calc(50% - 5px)')).join('') + '</div>').join('')
+    : '<div class="empty" style="padding:20px">未添加示范图</div>';
+  const piecesGrid = cols => '<div class="grid"' + (cols ? ' style="grid-template-columns:repeat(' + cols + ',1fr)"' : '') + '>' + items.map(i => itemCard(i)).join('') + '</div>';
+  let main;
+  if (ui.odLayout === 'side') {
+    main = '<div class="glabel"><span>示范图</span><span>我的单品 · ' + items.length + ' 件</span></div>' +
+      '<div class="side"><div class="col">' + (groups.length ? groups.map(g => g[2].map((p, i) => pimg(p, i, g[2].length, '100%')).join('')).join('') : '<div class="empty" style="padding:20px 0">无示范图</div>') + '</div>' +
+      '<div class="col">' + piecesGrid(2) + '</div></div>';
+  } else {
+    main = refsStack +
+      '<div class="glabel"><span>我的单品 · ' + items.length + ' 件</span></div>' + piecesGrid();
+  }
+  return '<div class="nav"><button class="l" data-act="back">' + I.back + '返回</button><div class="t">' + esc(o.name) + '</div><button class="r" data-act="editOutfit" data-id="' + o.id + '">编辑</button></div>' +
+    '<div class="body">' +
+    '<div class="dtitle">' + esc(o.name) + '</div>' +
+    '<div class="dsub">' + (o.photos.length ? srcText(o) + ' · ' : '') + (seasons.length ? '适合 ' + seasons.join(' / ') + ' · ' : '季节待确认 · ') + '创建于 ' + fmtDate(o.createdAt) + '</div>' +
+    '<div class="seg"><button class="' + (ui.odLayout === 'stack' ? 'on' : '') + '" data-act="odLayout" data-v="stack">上下对照</button><button class="' + (ui.odLayout === 'side' ? 'on' : '') + '" data-act="odLayout" data-v="side">左右并排</button></div>' +
+    main +
+    (items.length ? '' : '<div class="empty" style="padding:20px">单品已全部被删除</div>') +
+    '<button class="btn-danger" data-act="delOutfit" data-id="' + o.id + '">删除这套搭配</button>' +
+    '</div>';
+}
+function renderView(entry){
+  const s = entry.spec;
+  if (s.type === 'item') { const it = getItem(s.id); if (!it) return false; entry.el.innerHTML = itemDetailHTML(it); }
+  else if (s.type === 'outfit') { const o = getOutfit(s.id); if (!o) return false; entry.el.innerHTML = outfitDetailHTML(o); }
+  return true;
+}
+function push(spec){
+  const el = document.createElement('div'); el.className = 'view';
+  $('#stack').appendChild(el);
+  const entry = { el, spec }; ui.stack.push(entry); renderView(entry);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
+}
+function pop(){
+  const e = ui.stack.pop(); if (!e) return;
+  e.el.classList.remove('in'); setTimeout(() => e.el.remove(), 360);
+}
+function clearStack(){ ui.stack.forEach(e => e.el.remove()); ui.stack = []; }
+function refresh(){
+  renderPages();
+  ui.stack = ui.stack.filter(e => { if (renderView(e) === false) { e.el.classList.remove('in'); setTimeout(() => e.el.remove(), 360); return false; } return true; });
+}
+
+/* ---------- sheets ---------- */
+function openSheet(html){
+  const w = document.createElement('div'); w.className = 'sheet-wrap';
+  w.innerHTML = '<div class="sheet">' + html + '</div>';
+  $('#sheetroot').appendChild(w);
+  requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('on')));
+  return w;
+}
+function closeSheet(){
+  const w = $('#sheetroot .sheet-wrap:last-child'); if (!w) return;
+  w.classList.remove('on'); setTimeout(() => w.remove(), 380); ui.draft = null;
+}
+let asHandlers = [];
+function actionSheet(title, actions){
+  asHandlers = actions;
+  const w = document.createElement('div'); w.className = 'as-wrap'; w.dataset.act = 'asCancel';
+  w.innerHTML = '<div class="as"><div class="grp">' + (title ? '<div class="ttl">' + title + '</div>' : '') +
+    actions.map((a, i) => '<button class="' + (a.danger ? 'd' : '') + '" data-act="asPick" data-i="' + i + '">' + esc(a.label) + '</button>').join('') +
+    '</div><div class="grp"><button class="c" data-act="asCancel">取消</button></div></div>';
+  $('#asroot').appendChild(w);
+  requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('on')));
+}
+function closeAS(){ const w = $('#asroot .as-wrap'); if (!w) return; w.classList.remove('on'); setTimeout(() => w.remove(), 300); }
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800); }
+
+/* ---------- item editor ---------- */
+function chipsPick(field, vals, cur, multi, isColor){
+  return '<div class="chips" data-field="' + field + '">' + vals.map(v => {
+    const on = multi ? cur.includes(v) : cur === v;
+    return '<button class="chip' + (on ? ' on' : '') + '" data-act="pick" data-field="' + field + '" data-v="' + esc(v) + '">' + (isColor ? dotHTML(v) : '') + esc(v) + '</button>';
+  }).join('') + '</div>';
+}
+function openItemEditor(id){
+  const it = id ? getItem(id) : null;
+  ui.draft = { kind:'item', id:id || null, shape:it ? it.shape : undefined, img:it ? it.img : '', userImg:!!(it && !it.img.startsWith('data:image/svg')), name:it ? it.name : '', cat:it ? it.cat : '', seasons:it ? it.seasons.slice() : [], color:it ? it.color : '' };
+  const d = ui.draft;
+  openSheet(
+    '<div class="nav"><button class="l" data-act="closeSheet">取消</button><div class="t">' + (id ? '编辑衣物' : '添加衣物') + '</div><button class="r b" data-act="saveItem">保存</button></div>' +
+    '<div class="body">' +
+    '<div class="photo" id="itemPhoto"></div>' +
+    '<div class="pbtns">' +
+      '<label class="pbtn dark">' + I.camera + '拍照<input type="file" accept="image/*" capture="environment" data-file="itemimg" hidden></label>' +
+      '<label class="pbtn">' + I.photo + '从相册/商品图导入<input type="file" accept="image/*" data-file="itemimg" hidden></label>' +
+    '</div>' +
+    '<div class="glabel"><span>名称</span></div><div class="group"><input class="field" id="itemName" data-bind="name" placeholder="例如：白色基础T恤、运动鞋、驼色围巾" maxlength="30" value="' + esc(d.name) + '"></div>' +
+    '<div class="glabel"><span>品类（单选）</span><span>配饰含围巾、项链、耳饰、帽子、包、腰带</span></div><div class="group">' + chipsPick('cat', CATS, d.cat, false) + '</div>' +
+    '<div class="glabel"><span>季节（可多选）</span></div><div class="group">' + chipsPick('seasons', SEASONS, d.seasons, true) + '</div>' +
+    '<div class="glabel"><span>色系（单选）</span></div><div class="group">' + chipsPick('color', COLORS.map(c => c[0]), d.color, false, true) + '</div>' +
+    '<div id="dupPanel"></div>' +
+    '</div>');
+  updateItemPhoto(); updateDup();
+}
+// 防重复：同品类 + 同色系的已有衣物（编辑时排除自己）
+function updateDup(){
+  const d = ui.draft, box = $('#dupPanel'); if (!d || !box) return;
+  if (!d.cat || !d.color) { box.innerHTML = ''; return; }
+  const same = db.items.filter(x => x.cat === d.cat && x.color === d.color && x.id !== d.id).sort((a, b) => b.createdAt - a.createdAt);
+  const was = box.innerHTML;
+  box.innerHTML = same.length
+    ? '<div class="dup"><h4>你已有相似的 ' + same.length + ' 件</h4><p>同为「' + esc(d.cat) + ' · ' + esc(d.color) + '」，确认不是重复的再保存</p><div class="dl">' +
+      same.map(x => '<button class="di2" data-act="peekItem" data-id="' + x.id + '"><span class="ph"><img src="' + x.img + '" alt=""></span><div class="nm">' + esc(x.name) + '</div></button>').join('') + '</div></div>'
+    : '<div class="dup none">✓ 衣橱里还没有「' + esc(d.cat) + ' · ' + esc(d.color) + '」的衣物</div>';
+  if (!was) box.scrollIntoView({ block:'nearest', behavior:'smooth' });
+}
+function peekItem(id){
+  const it = getItem(id); if (!it) return;
+  const n = outfitsWith(id).length;
+  const w = document.createElement('div'); w.className = 'as-wrap'; w.dataset.act = 'asCancel';
+  w.innerHTML = '<div class="peek"><span class="ph"><img src="' + it.img + '" alt=""></span><div class="pi"><h3>' + esc(it.name) + '</h3><div class="tags"><span class="tag">' + esc(it.cat) + '</span>' +
+    sortSeasons(it.seasons).map(s => '<span class="tag">' + s + '</span>').join('') + '<span class="tag">' + dotHTML(it.color) + esc(it.color) + '</span></div></div>' +
+    '<div class="pn">添加于 ' + fmtDate(it.createdAt) + (n ? ' · 已在 ' + n + ' 套搭配中' : '') + '</div></div>' +
+    '<div class="as"><div class="grp"><button class="c" data-act="asCancel">返回继续添加</button></div></div>';
+  $('#asroot').appendChild(w);
+  requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('on')));
+}
+function updateItemPhoto(){
+  const d = ui.draft, box = $('#itemPhoto'); if (!d || !box) return;
+  if (d.userImg && d.img) box.innerHTML = '<img src="' + d.img + '" alt="">';
+  else if (d.cat && d.color) box.innerHTML = '<img src="' + garmentSVG(d.cat, d.color, d.shape) + '" alt=""><div class="hint">未选择照片 · 将使用示意图</div>';
+  else box.innerHTML = '<div style="text-align:center;color:#8f867c;font-size:14px;line-height:1.8">' + I.photo.replace('<svg', '<svg width="44" height="44"') + '<br>拍照或导入商品图<br><small>也可以不选，保存时生成示意图</small></div>';
+}
+async function saveItem(){
+  const d = ui.draft; if (!d || d.saving) return;
+  if (!d.cat) return toast('请选择品类');
+  if (!d.seasons.length) return toast('请至少选择一个季节');
+  if (!d.color) return toast('请选择色系');
+  const name = d.name.trim() || (d.color + d.cat);
+  const img = d.userImg && d.img ? d.img : garmentSVG(d.cat, d.color, d.shape);
+  let it;
+  if (d.id) { it = Object.assign({}, getItem(d.id), { name, cat:d.cat, seasons:sortSeasons(d.seasons), color:d.color, img }); }
+  else { it = { id:uid('i'), name, cat:d.cat, seasons:sortSeasons(d.seasons), color:d.color, img, createdAt:Date.now() }; }
+  d.saving = true;
+  try { await Store.apply({ items:[it] }); } catch (e) { storageError(e); return; } finally { d.saving = false; }
+  if (d.id) db.items = db.items.map(x => x.id === d.id ? it : x); else db.items.push(it);
+  if (ui.draft !== d) { refresh(); return; }
+  const isNew = !d.id;
+  closeSheet(); refresh(); toast(isNew ? '已添加到衣橱' : '已保存');
+}
+
+/* ---------- outfit editor ---------- */
+function openOutfitEditor(id, preId){
+  const o = id ? getOutfit(id) : null;
+  ui.draft = { kind:'outfit', id:id || null, name:o ? o.name : '', blogger:o ? o.blogger : '', photos:o ? o.photos.map(p => Object.assign({}, p)) : [], sel:o ? o.itemIds.filter(getItem) : (preId ? [preId] : []), pf:newFilter() };
+  const d = ui.draft;
+  openSheet(
+    '<div class="nav"><button class="l" data-act="closeSheet">取消</button><div class="t">' + (id ? '编辑搭配' : '新建搭配') + '</div><button class="r b" data-act="saveOutfit">保存</button></div>' +
+    '<div class="body">' +
+    '<div class="glabel"><span>搭配名称</span></div><div class="group"><input class="field" id="outfitName" data-bind="name" placeholder="例如：通勤风衣 Look" maxlength="30" value="' + esc(d.name) + '"></div>' +
+    '<div class="glabel"><span>博主示范图（可多张，可不填）</span></div><div class="group"><div class="refs" id="refListB"></div>' +
+      '<input class="field" id="bloggerName" data-bind="blogger" placeholder="博主名（可选），例如：某某穿搭" maxlength="30" value="' + esc(d.blogger) + '" style="border-top:.5px solid var(--sep)"></div>' +
+    '<div class="glabel"><span>我的穿搭照片（可多张，可不填）</span></div><div class="group"><div class="refs" id="refListS"></div></div>' +
+    '<div class="glabel"><span>从衣橱选择单品</span><span id="selCount"></span></div>' +
+    '<div class="group picker"><div id="pickFilters"></div><div id="pickGrid"></div></div>' +
+    '</div>');
+  renderRefs(); renderPicker();
+}
+function renderRefs(){
+  const d = ui.draft; if (!d || !$('#refListB')) return;
+  const list = (src, addText) => d.photos.map((p, i) => p.src === src ? '<div class="rt"><img src="' + p.img + '" alt=""><button class="x" data-act="delRef" data-i="' + i + '">×</button></div>' : '').join('') +
+    '<label class="add">' + I.plus + addText + '<input type="file" accept="image/*" multiple data-file="refs" data-src="' + src + '" hidden></label>';
+  $('#refListB').innerHTML = list('blogger', '添加博主图');
+  $('#refListS').innerHTML = list('self', '添加我的照片');
+}
+function renderPicker(){
+  const d = ui.draft; if (!d || d.kind !== 'outfit') return;
+  $('#pickFilters').innerHTML = filtersHTML(d.pf, 'p');
+  const first = d.firstSel || (d.firstSel = d.sel.slice()); // initially-selected items stay on top
+  const list = applyFilter(db.items, d.pf).sort((a, b) => (first.includes(b.id) - first.includes(a.id)) || b.createdAt - a.createdAt);
+  $('#pickGrid').innerHTML = list.length ? '<div class="grid">' + list.map(it => itemCard(it, { act:'toggleSel', pick:true, sel:d.sel.includes(it.id) })).join('') + '</div>' : '<div class="empty" style="padding:24px">没有符合条件的衣物</div>';
+  $('#selCount').textContent = '已选 ' + d.sel.length + ' 件';
+}
+async function saveOutfit(){
+  const d = ui.draft; if (!d || d.saving) return;
+  if (!d.sel.length) return toast('请至少选择一件单品');
+  const name = d.name.trim() || ('搭配 ' + (db.outfits.length + 1));
+  const data = { name, blogger:d.blogger.trim(), photos:d.photos.slice(), itemIds:d.sel.slice() };
+  let o, isNew = !d.id;
+  if (d.id) { o = Object.assign({}, getOutfit(d.id), data); }
+  else { o = Object.assign({ id:uid('o'), createdAt:Date.now() }, data); }
+  d.saving = true;
+  try { await Store.apply({ outfits:[o] }); } catch (e) { storageError(e); return; } finally { d.saving = false; }
+  if (d.id) db.outfits = db.outfits.map(x => x.id === d.id ? o : x); else db.outfits.push(o);
+  if (ui.draft !== d) { refresh(); return; }
+  closeSheet();
+  if (isNew && d.fromItem) { refresh(); push({ type:'outfit', id:o.id }); toast('搭配已保存'); }
+  else if (isNew) { ui.tab = 'outfits'; clearStack(); refresh(); push({ type:'outfit', id:o.id }); toast('搭配已保存'); }
+  else { refresh(); toast('已保存'); }
+}
+
+/* ---------- image reading (camera photos -> max 1200px JPEG) ---------- */
+function readImage(file, max){
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(fr.error);
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.naturalWidth * s)); c.height = Math.max(1, Math.round(img.naturalHeight * s));
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => reject(new Error('无法读取该图片'));
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, id = el.dataset.id;
+  if (a === 'asCancel' && e.target !== el && el.classList.contains('as-wrap')) return; // clicks inside sheet
+  switch (a) {
+    case 'tab': ui.tab = el.dataset.v; clearStack(); renderPages(); $('#page-' + ui.tab).scrollTop = 0; break;
+    case 'filter': {
+      const f = el.dataset.scope === 'w' ? ui.wf : ui.draft.pf, dim = el.dataset.dim, v = el.dataset.v;
+      if (!v) f[dim].clear(); else f[dim].has(v) ? f[dim].delete(v) : f[dim].add(v);
+      if (el.dataset.scope === 'w') { const sl = [...document.querySelectorAll('#page-wardrobe .frow')].map(r => r.scrollLeft); renderWardrobe(); document.querySelectorAll('#page-wardrobe .frow').forEach((r, i) => r.scrollLeft = sl[i]); }
+      else { const sl = [...document.querySelectorAll('#pickFilters .frow')].map(r => r.scrollLeft); renderPicker(); document.querySelectorAll('#pickFilters .frow').forEach((r, i) => r.scrollLeft = sl[i]); }
+      break; }
+    case 'openItem': push({ type:'item', id }); break;
+    case 'openOutfit': push({ type:'outfit', id }); break;
+    case 'back': pop(); break;
+    case 'odLayout': ui.odLayout = el.dataset.v; refresh(); break;
+    case 'plus': actionSheet('', [
+      { label:'添加衣物', fn:() => openItemEditor() },
+      { label:'新建搭配', fn:() => db.items.length ? openOutfitEditor() : toast('衣橱是空的，请先添加衣物') }]); break;
+    case 'settings': openMenu(); break;
+    case 'exportBackup': exportBackup(); break;
+    case 'snooze': Store.setMeta('snoozeUntil', Date.now() + 3 * DAY).catch(() => {}); renderWardrobe(); break;
+    case 'addItem': openItemEditor(); break;
+    case 'loadSample': confirmLoadSample(); break;
+    case 'asPick': { const h = asHandlers[+el.dataset.i]; closeAS(); if (h && h.fn) h.fn(); break; }
+    case 'asCancel': closeAS(); break;
+    case 'closeSheet': closeSheet(); break;
+    case 'editItem': openItemEditor(id); break;
+    case 'editOutfit': openOutfitEditor(id); break;
+    case 'pick': {
+      const d = ui.draft, f = el.dataset.field, v = el.dataset.v;
+      if (f === 'seasons') { d.seasons.includes(v) ? d.seasons.splice(d.seasons.indexOf(v), 1) : d.seasons.push(v); el.classList.toggle('on'); }
+      else { d[f] = v; el.parentNode.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === el)); }
+      updateItemPhoto(); if (f !== 'seasons') updateDup(); break; }
+    case 'peekItem': peekItem(id); break;
+    case 'saveItem': saveItem(); break;
+    case 'delItem': {
+      const it = getItem(id), n = db.outfits.filter(o => o.itemIds.includes(id)).length;
+      actionSheet('确定删除「' + esc(it.name) + '」？' + (n ? '<br>它会从 ' + n + ' 套搭配中移除' : ''), [{ label:'删除衣物', danger:true, fn:() => {
+        const touched = db.outfits.filter(o => o.itemIds.includes(id)); db.items = db.items.filter(x => x.id !== id); touched.forEach(o => o.itemIds = o.itemIds.filter(x => x !== id));
+        persist({ delItems:[id], outfits:touched }); refresh(); toast('已删除'); } }]); break; }
+    case 'delOutfit': {
+      const o = getOutfit(id);
+      actionSheet('确定删除搭配「' + esc(o.name) + '」？<br>衣橱中的衣物不会被删除', [{ label:'删除搭配', danger:true, fn:() => {
+        db.outfits = db.outfits.filter(x => x.id !== id); persist({ delOutfits:[id] }); refresh(); toast('已删除'); } }]); break; }
+    case 'toggleSel': { const d = ui.draft, i = d.sel.indexOf(id); i >= 0 ? d.sel.splice(i, 1) : d.sel.push(id); el.classList.toggle('sel'); $('#selCount').textContent = '已选 ' + d.sel.length + ' 件'; break; }
+    case 'delRef': ui.draft.photos.splice(+el.dataset.i, 1); renderRefs(); break;
+    case 'saveOutfit': saveOutfit(); break;
+    case 'newOutfitWith': openOutfitEditor(null, id); ui.draft.fromItem = true; break;
+  }
+});
+document.addEventListener('input', e => { const b = e.target.dataset && e.target.dataset.bind; if (b && ui.draft) ui.draft[b] = e.target.value; });
+document.addEventListener('change', async e => {
+  const t = e.target, kind = t.dataset && t.dataset.file; if (!kind || !ui.draft) return;
+  const files = [...t.files]; t.value = '';
+  if (!files.length) return;
+  try {
+    if (kind === 'itemimg') { ui.draft.img = await readImage(files[0], 1200); ui.draft.userImg = true; updateItemPhoto(); }
+    else if (kind === 'refs') { const src = t.dataset.src === 'self' ? 'self' : 'blogger'; for (const f of files) ui.draft.photos.push({ src, img:await readImage(f, 1200) }); renderRefs(); }
+  } catch (err) { toast(err.message || '图片读取失败'); }
+});
+
+/* ---------- menu: backup / sample / clear ---------- */
+const DAY = 86400000;
+const realItems = () => db.items.filter(x => !x.sample);
+const hasSample = () => db.items.some(x => x.sample) || db.outfits.some(o => o.sample);
+function fmtDateTime(ts){ const d = new Date(ts), p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+function backupText(){
+  if (!meta.lastBackup) return '上次备份：从未备份';
+  const days = Math.floor((Date.now() - meta.lastBackup) / DAY);
+  return '上次备份：' + fmtDateTime(meta.lastBackup) + (days >= 1 ? '（' + days + ' 天前）' : '（今天）');
+}
+function backupDue(){
+  const real = realItems(); if (!real.length) return 0;
+  const ref = meta.lastBackup || Math.min.apply(null, real.map(x => x.createdAt || Date.now()));
+  const days = Math.floor((Date.now() - ref) / DAY);
+  if (days < 14 || (meta.snoozeUntil && Date.now() < meta.snoozeUntil)) return 0;
+  return days;
+}
+function reminderHTML(){
+  const days = backupDue(); if (!days) return '';
+  return '<div class="remind"><span class="tx">' + (meta.lastBackup ? '已经 ' + days + ' 天没有备份了。' : '你还没有备份过。') + '数据只保存在这台手机上，建议导出一份备份。</span>' +
+    '<button data-act="exportBackup">立即备份</button><button class="later" data-act="snooze">稍后</button></div>';
+}
+function openMenu(){
+  const acts = [
+    { label:'导出备份', fn:exportBackup },
+    { label:'导入备份', fn:() => { const inp = $('#importInput'); inp.value = ''; inp.click(); } },
+    hasSample() ? { label:'删除示例数据', fn:() => setTimeout(confirmRemoveSample, 320) } : { label:'载入示例数据', fn:() => setTimeout(confirmLoadSample, 320) },
+    { label:'清空全部数据', danger:true, fn:() => setTimeout(confirmClear1, 320) }
+  ];
+  actionSheet('我的衣橱 · 版本 ' + APP_VERSION + '<br>' + db.items.length + ' 件衣物 · ' + db.outfits.length + ' 套搭配<br><b>' + backupText() + '</b><br><small>数据只保存在这台设备上（不上传、不同步），请定期导出备份</small>', acts);
+}
+function confirmLoadSample(){
+  actionSheet(db.items.length ? '将 17 件示例衣物和 7 套示例搭配<b>添加</b>到你的衣橱中（不会删除你已有的数据）。之后可在 ⋯ 中一键删除示例数据' : '载入 17 件示例衣物和 7 套示例搭配，看看效果。之后可在 ⋯ 中一键删除', [
+    { label:'载入示例数据', fn:() => { const s = makeSample(); db.items.push(...s.items); db.outfits.push(...s.outfits); persist({ items:s.items, outfits:s.outfits }); ui.wf = newFilter(); clearStack(); refresh(); toast('已载入示例数据'); } }]);
+}
+function confirmRemoveSample(){
+  actionSheet('删除所有示例衣物和示例搭配？你自己添加的不受影响', [{ label:'删除示例数据', danger:true, fn:() => {
+    const di = db.items.filter(x => x.sample).map(x => x.id), dout = db.outfits.filter(o => o.sample).map(o => o.id), set = new Set(di);
+    db.items = db.items.filter(x => !x.sample); db.outfits = db.outfits.filter(o => !o.sample);
+    const touched = db.outfits.filter(o => o.itemIds.some(id => set.has(id))); touched.forEach(o => o.itemIds = o.itemIds.filter(id => !set.has(id)));
+    persist({ delItems:di, delOutfits:dout, outfits:touched }); clearStack(); refresh(); toast('已删除示例数据'); } }]);
+}
+function confirmClear1(){
+  actionSheet('清空全部数据？<br>将删除这台设备上的<b>所有衣物、搭配和照片</b>。建议先导出备份', [
+    { label:'导出备份', fn:exportBackup },
+    { label:'继续清空', danger:true, fn:() => setTimeout(confirmClear2, 320) }]);
+}
+function confirmClear2(){
+  actionSheet('再次确认：' + db.items.length + ' 件衣物和 ' + db.outfits.length + ' 套搭配将被永久删除，无法恢复', [{ label:'永久删除全部数据', danger:true, fn:() => {
+    Store.replaceAll([], []).then(() => { db = { items:[], outfits:[] }; ui.wf = newFilter(); clearStack(); refresh(); toast('已清空'); }).catch(storageError); } }]);
+}
+// 导出：单个 JSON 文件（含全部图片）。iPhone 上优先用系统分享面板（可“存储到文件”/AirDrop/发给自己）
+function exportBackup(){
+  if (!db.items.length && !db.outfits.length) return toast('衣橱是空的，暂无可备份内容');
+  const now = new Date(), p = n => String(n).padStart(2, '0');
+  const name = 'wardrobe-backup-' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate()) + '-' + p(now.getHours()) + p(now.getMinutes()) + '.json';
+  const payload = JSON.stringify({ app:'my-wardrobe', format:1, appVersion:APP_VERSION, exportedAt:now.toISOString(), items:db.items, outfits:db.outfits });
+  const done = () => { Store.setMeta('lastBackup', Date.now()).then(() => renderWardrobe()).catch(() => {}); toast('备份已导出'); };
+  let file = null;
+  try { file = new File([payload], name, { type:'application/json' }); } catch (e) {}
+  if (file && navigator.canShare && navigator.share && navigator.canShare({ files:[file] })) {
+    navigator.share({ files:[file], title:'衣橱备份' }).then(done).catch(err => {
+      if (err && err.name === 'AbortError') toast('已取消导出'); else download(payload, name, done);
+    });
+  } else download(payload, name, done);
+}
+function download(text, name, done){
+  const url = URL.createObjectURL(new Blob([text], { type:'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000); done();
+}
+$('#importInput').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  let data;
+  try { data = JSON.parse(await f.text()); } catch (err) { return toast('无法读取：这不是有效的备份文件'); }
+  if (!data || data.app !== 'my-wardrobe' || !Array.isArray(data.items) || !Array.isArray(data.outfits)) return toast('这不是衣橱的备份文件');
+  const clean = normalizeData(data);
+  setTimeout(() => actionSheet('用这份备份<b>替换</b>当前全部数据？<br>备份时间：' + (data.exportedAt ? fmtDateTime(Date.parse(data.exportedAt)) : '未知') + '<br>备份内容：' + clean.items.length + ' 件衣物、' + clean.outfits.length + ' 套搭配<br>当前数据（' + db.items.length + ' 件、' + db.outfits.length + ' 套）将被覆盖', [
+    { label:'替换为备份数据', danger:true, fn:() => {
+      Store.replaceAll(clean.items, clean.outfits).then(() => { db = clean; ui.wf = newFilter(); clearStack(); refresh(); toast('已从备份恢复 ' + clean.items.length + ' 件衣物'); }).catch(storageError); } }]), 100);
+});
+
+/* ---------- service worker (offline) ---------- */
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW 注册失败', err)));
+}
+init();
+window.__wardrobe = { get db(){ return db; }, get meta(){ return meta; } }; // for debugging/tests
+})();
+</script>
+</body>
+</html>
