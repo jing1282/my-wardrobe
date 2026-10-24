@@ -636,7 +636,6 @@ function todayHTML(){
     '<h2 class="dtitle">给今天一点灵感</h2><p class="dsub">从你保存过的搭配中随机挑选，不会自动新增搭配。</p>' +
     '<div class="frow" style="margin-bottom:16px">' + ['', ...SEASONS].map(s => '<button class="chip' + (today.season === s ? ' on' : '') + '" data-act="todaySeason" data-v="' + s + '" aria-pressed="' + (today.season === s) + '">' + (s || '全部季节') + '</button>').join('') + '</div>' +
     '<div aria-live="polite">' + (o ? '<p class="dsub">这套怎么样？ · ' + choices.length + ' 套可选</p>' + outfitCard(o) +
-      '<div class="grid">' + o.itemIds.map(getItem).map(i => itemCard(i)).join('') +
       (choices.length > 1 ? '<button class="cta" data-act="todayAgain">换一套</button>' : '<p class="foot">目前只有这一套符合条件，可切换季节或添加更多搭配。</p>') +
       '<button class="cta light" data-act="openOutfit" data-id="' + esc(o.id) + '">查看这套搭配</button>' +
       '<div class="grid">' + o.itemIds.map(getItem).map(i => itemCard(i)).join('') + '</div>' :
