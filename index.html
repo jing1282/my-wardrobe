@@ -256,7 +256,7 @@ input{font:inherit}
 <script>
 (function(){
 'use strict';
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.1.0';
 const DB_NAME = 'my-wardrobe', DB_VER = 1;
 const LEGACY_KEYS = ['wardrobe-demo-v3', 'wardrobe-demo-v2', 'wardrobe-demo-v1'];
 const CATS = ['上衣','针织','马甲','外套','裤子','半裙','连衣裙','鞋子','配饰'];
@@ -516,7 +516,7 @@ function renderWardrobe(){
   $('#page-wardrobe').innerHTML =
     '<div class="largehead"><h1>衣橱</h1><button class="iconbtn" data-act="settings" aria-label="更多">' + I.more + '</button></div>' +
     '<div class="sub">共 ' + db.items.length + ' 件' + (any ? ' · 筛选出 ' + list.length + ' 件' : '') + '</div>' +
-    reminderHTML() +
+    todayEntryHTML() + reminderHTML() +
     (db.items.length ? filtersHTML(ui.wf, 'w') : '') +
     (list.length ? '<div class="grid">' + list.map(it => itemCard(it)).join('') + '</div>'
       : db.items.length ? '<div class="empty">没有符合条件的衣物<br>试试调整筛选</div>'
@@ -539,7 +539,7 @@ function renderOutfits(){
   const list = db.outfits.slice().sort((a, b) => b.createdAt - a.createdAt);
   $('#page-outfits').innerHTML =
     '<div class="largehead"><h1>搭配</h1><button class="iconbtn" data-act="settings" aria-label="更多">' + I.more + '</button></div>' +
-    '<div class="sub">' + list.length + ' 套搭配</div>' +
+    '<div class="sub">' + list.length + ' 套搭配</div>' + todayEntryHTML() +
     (list.length ? list.map(outfitCard).join('') : '<div class="empty">还没有搭配<br>' + (db.items.length ? '点击下方 ＋ 新建搭配，附上博主示范或自己的穿搭照片' : '先在衣橱里添加衣物，再来组合搭配') + '</div>');
 }
 function renderPages(){
@@ -615,9 +615,38 @@ function outfitDetailHTML(o){
     '<button class="btn-danger" data-act="delOutfit" data-id="' + o.id + '">删除这套搭配</button>' +
     '</div>';
 }
+
+/* ---------- today's saved outfit ---------- */
+const today = { season:'', id:null };
+function todayEntryHTML(){
+  return '<button class="cta" style="margin-bottom:14px;background:#a8724a" data-act="today">今天穿什么 · 随机选一套</button>';
+}
+function todayCandidates(){
+  return db.outfits.filter(o => o.itemIds.length && o.itemIds.every(id => !!getItem(id)) &&
+    (!today.season || outfitSeasons(o.itemIds.map(getItem)).includes(today.season)));
+}
+function pickToday(){
+  const choices = todayCandidates();
+  const next = choices.length > 1 ? choices.filter(o => o.id !== today.id) : choices;
+  today.id = next.length ? next[Math.floor(Math.random() * next.length)].id : null;
+}
+function todayHTML(){
+  const choices = todayCandidates(), o = choices.find(o => o.id === today.id);
+  return '<div class="nav"><button class="l" data-act="back">' + I.back + '返回</button><div class="t">今天穿什么</div></div><div class="body">' +
+    '<h2 class="dtitle">给今天一点灵感</h2><p class="dsub">从你保存过的搭配中随机挑选，不会自动新增搭配。</p>' +
+    '<div class="frow" style="margin-bottom:16px">' + ['', ...SEASONS].map(s => '<button class="chip' + (today.season === s ? ' on' : '') + '" data-act="todaySeason" data-v="' + s + '" aria-pressed="' + (today.season === s) + '">' + (s || '全部季节') + '</button>').join('') + '</div>' +
+    '<div aria-live="polite">' + (o ? '<p class="dsub">这套怎么样？ · ' + choices.length + ' 套可选</p>' + outfitCard(o) +
+      '<div class="grid">' + o.itemIds.map(getItem).map(i => itemCard(i)).join('') +
+      (choices.length > 1 ? '<button class="cta" data-act="todayAgain">换一套</button>' : '<p class="foot">目前只有这一套符合条件，可切换季节或添加更多搭配。</p>') +
+      '<button class="cta light" data-act="openOutfit" data-id="' + esc(o.id) + '">查看这套搭配</button>' +
+      '<div class="grid">' + o.itemIds.map(getItem).map(i => itemCard(i)).join('') + '</div>' :
+      '<div class="emptybox">' + (db.outfits.length ? '这个季节暂无可选搭配，试试「全部季节」。' : '还没有保存搭配。先把喜欢的穿法存下来，下次就能帮你随机选。') + '</div>') + '</div></div>';
+}
+
 function renderView(entry){
   const s = entry.spec;
-  if (s.type === 'item') { const it = getItem(s.id); if (!it) return false; entry.el.innerHTML = itemDetailHTML(it); }
+  if (s.type === 'today') { if (!todayCandidates().some(o => o.id === today.id)) pickToday(); entry.el.innerHTML = todayHTML(); }
+  else if (s.type === 'item') { const it = getItem(s.id); if (!it) return false; entry.el.innerHTML = itemDetailHTML(it); }
   else if (s.type === 'outfit') { const o = getOutfit(s.id); if (!o) return false; entry.el.innerHTML = outfitDetailHTML(o); }
   return true;
 }
@@ -814,6 +843,9 @@ document.addEventListener('click', e => {
   const a = el.dataset.act, id = el.dataset.id;
   if (a === 'asCancel' && e.target !== el && el.classList.contains('as-wrap')) return; // clicks inside sheet
   switch (a) {
+    case 'today': pickToday(); push({ type:'today' }); break;
+    case 'todayAgain': pickToday(); refresh(); break;
+    case 'todaySeason': today.season = el.dataset.v; pickToday(); refresh(); break;
     case 'tab': ui.tab = el.dataset.v; clearStack(); renderPages(); $('#page-' + ui.tab).scrollTop = 0; break;
     case 'filter': {
       const f = el.dataset.scope === 'w' ? ui.wf : ui.draft.pf, dim = el.dataset.dim, v = el.dataset.v;

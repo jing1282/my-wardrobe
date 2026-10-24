@@ -2,7 +2,7 @@
  * 只缓存 App 本身（界面代码与图标），用于离线打开。你的衣物和照片保存在 IndexedDB 中，不经过这里，也不会上传。
  * 发布新版本时修改 VERSION（与 index.html 中的 APP_VERSION 保持一致），旧缓存会被自动清理。
  */
-const VERSION = '1.0.1';
+const VERSION = '1.1.0';
 const CACHE = 'wardrobe-shell-' + VERSION;
 const SHELL = [
   './',
